@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cleacyti — Reconnaissance plastique en direct</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#12151A">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12151A; --panel:#1A1F26; --line:#2B333D;
+    --text:#E9ECEF; --muted:#8B95A1;
+    --plastic:#3ED9A0; --pyro:#FF9245; --spatial:#5FA8FF;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; padding:28px 20px; }
+  .wrap{ max-width:720px; margin:0 auto; }
+  h1{ font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; }
+  h1 span{ color:var(--plastic); }
+  .sub{ color:var(--muted); font-size:13px; margin:6px 0 20px; }
+
+  .stage{
+    position:relative; width:100%; aspect-ratio:4/3;
+    background:#000; border-radius:12px; overflow:hidden;
+    border:1px solid var(--line);
+  }
+  video{ position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; transform: scaleX(-1); }
+
+  .controls{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  button{
+    background:var(--panel); color:var(--text);
+    border:1px solid var(--line); border-radius:8px;
+    padding:10px 16px; font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px; cursor:pointer;
+  }
+  button.primary{ background:var(--plastic); color:#0B1210; border:none; font-weight:600; }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .status{
+    margin-top:14px; font-family:'IBM Plex Mono',monospace; font-size:12px;
+    color:var(--muted); display:flex; align-items:center; gap:8px;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--muted); }
+  .dot.live{ background:var(--plastic); animation:pulse 1.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .results{ margin-top:16px; }
+  .result-item{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:10px 14px; margin-bottom:8px;
+    font-family:'IBM Plex Mono',monospace; font-size:13px;
+  }
+  .result-item.top{ border-color:var(--plastic); }
+  .conf-bar{ width:100px; height:6px; background:var(--line); border-radius:3px; overflow:hidden; }
+  .conf-fill{ height:100%; background:var(--plastic); transition:width 0.15s ease; }
+
+  .note{
+    margin-top:18px; padding:14px; background:var(--panel);
+    border:1px solid var(--line); border-radius:8px;
+    font-size:12.5px; color:var(--muted); line-height:1.6;
+  }
+  .note b{ color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Clea<span>cyti</span> — Reconnaissance en direct</h1>
+  <div class="sub">Modèle entraîné par l'utilisateur (Teachable Machine) branché sur la caméra live</div>
+
+  <div class="stage">
+    <video id="video" autoplay playsinline muted></video>
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="btnStart">Activer la caméra</button>
+    <button id="btnStop" disabled>Arrêter</button>
+  </div>
+
+  <div class="status">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">Caméra inactive</span>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <div class="note">
+    <b>Modèle utilisé :</b> ton modèle Teachable Machine
+    (<code>EhRbD4__y</code>), chargé directement depuis ton lien exporté.
+    Les catégories affichées ci-dessus sont exactement celles que tu as entraînées
+    (par ex. HDPE / LDPE), avec leur pourcentage de confiance en temps réel.
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+<script>
+  const MODEL_URL = "https://teachablemachine.withgoogle.com/models/EhRbD4__y/";
+
+  const video = document.getElementById('video');
+  const btnStart = document.getElementById('btnStart');
+  const btnStop = document.getElementById('btnStop');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const resultsEl = document.getElementById('results');
+
+  let model = null;
+  let stream = null;
+  let running = false;
+
+  async function loadModel(){
+    statusText.textContent = 'Chargement du modèle Cleacyti...';
+    model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+    statusText.textContent = 'Modèle prêt';
+  }
+
+  async function startCamera(){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      video.srcObject = stream;
+      await new Promise(r => video.onloadedmetadata = r);
+
+      if(!model) await loadModel();
+
+      running = true;
+      btnStart.disabled = true;
+      btnStop.disabled = false;
+      statusDot.classList.add('live');
+      statusText.textContent = 'Caméra active — reconnaissance en cours';
+      detectLoop();
+    }catch(err){
+      statusText.textContent = 'Erreur : ' + err.message;
+    }
+  }
+
+  function stopCamera(){
+    running = false;
+    if(stream) stream.getTracks().forEach(t => t.stop());
+    btnStart.disabled = false;
+    btnStop.disabled = true;
+    statusDot.classList.remove('live');
+    statusText.textContent = 'Caméra inactive';
+    resultsEl.innerHTML = '';
+  }
+
+  async function detectLoop(){
+    if(!running) return;
+    const predictions = await model.predict(video);
+    predictions.sort((a,b) => b.probability - a.probability);
+    renderResults(predictions);
+    requestAnimationFrame(detectLoop);
+  }
+
+  function renderResults(preds){
+    resultsEl.innerHTML = preds.map((p,i) => `
+      <div class="result-item ${i===0 ? 'top' : ''}">
+        <span>${p.className}</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="conf-bar"><div class="conf-fill" style="width:${(p.probability*100).toFixed(0)}%"></div></div>
+          <span>${(p.probability*100).toFixed(0)}%</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  btnStart.addEventListener('click', startCamera);
+  btnStop.addEventListener('click', stopCamera);
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW erreur:', err));
+  }
+</script>
+</body>
+</html>
