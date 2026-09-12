@@ -19,6 +19,9 @@ jobs:
             cp -r extracted_files/* .
           fi
 
+      - name: Fix file permissions
+        run: chmod -R u+rwX .
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
