@@ -6,8 +6,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract project archive
-        run: unzip -o ProjetComplet.zip -d .
+      - name: Extract main archive
+        run: |
+          mkdir -p extracted_files
+          unzip -o ProjetComplet.zip -d extracted_files || true
+
+      - name: Extract nested archive if present
+        run: |
+          if [ -f "extracted_files/CleanCityBot.zip" ]; then
+            unzip -o extracted_files/CleanCityBot.zip -d .
+          else
+            cp -r extracted_files/* .
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -15,30 +25,17 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        run: |
-          if [ -f "package.json" ]; then
-            npm install
-          elif [ -f "CleanCityBotEnergy/package.json" ]; then
-            cd CleanCityBotEnergy && npm install
-          fi
+        run: npm install --legacy-peer-deps
 
       - name: Build Android APK
         run: |
-          if [ -d "android" ]; then
-            npx cap sync android
-            cd android
-            chmod +x gradlew
-            ./gradlew assembleDebug
-          elif [ -d "CleanCityBotEnergy/android" ]; then
-            cd CleanCityBotEnergy
-            npx cap sync android
-            cd android
-            chmod +x gradlew
-            ./gradlew assembleDebug
-          fi
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: '**/android/app/build/outputs/apk/debug/app-debug.apk'
+          path: android/app/build/outputs/apk/debug/app-debug.apk
