@@ -14,7 +14,7 @@ jobs:
       - name: Extract nested archive if present
         run: |
           if [ -f "extracted_files/CleanCityBot.zip" ]; then
-            unzip -o extracted_files/CleanCityBot.zip -d .
+            unzip -o extracted_files/CleanCityBot.zip -d . || true
           else
             cp -r extracted_files/* .
           fi
