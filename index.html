@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CleanCity Bot Energy</title>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --bg: #f8fafc;
+      --text: #1e293b;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ECRAN D'ACCUEIL PRINCIPAL */
+    .splash-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+      background: #ffffff;
+    }
+
+    .main-logo {
+      max-width: 280px;
+      width: 80%;
+      height: auto;
+      margin-bottom: 25px;
+    }
+
+    .app-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 10px 0;
+    }
+
+    .app-subtitle {
+      color: #64748b;
+      font-size: 1rem;
+      max-width: 320px;
+      margin-bottom: 40px;
+      line-height: 1.4;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+      transition: transform 0.2s, background-color 0.2s;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+      background-color: var(--primary-dark);
+    }
+
+    /* MODALE DE SIGNALEMENT */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+      text-align: left;
+      position: relative;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #94a3b8;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    .photo-upload-box {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+    }
+
+    .photo-upload-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-weight: 600;
+      color: #1e293b;
+      cursor: pointer;
+    }
+
+    .file-input-hidden {
+      display: none;
+    }
+
+    .file-name-preview {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #64748b;
+      word-break: break-all;
+    }
+
+    .urgency-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .urgency-option input[type="radio"] {
+      display: none;
+    }
+
+    .urgency-label {
+      display: block;
+      padding: 10px;
+      text-align: center;
+      border: 1px solid #cbd5e1;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .urgency-option input[type="radio"]:checked + .urgency-label {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .disclaimer {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    /* CARTE DE CONFIRMATION DE REMERCIEMENT */
+    .thank-you-box {
+      display: none;
+      text-align: center;
+      padding: 30px 10px;
+    }
+
+    .thank-you-icon {
+      font-size: 50px;
+      margin-bottom: 15px;
+    }
+
+    .thank-you-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #065f46;
+      margin-bottom: 10px;
+    }
+
+    .thank-you-text {
+      color: #475569;
+      font-size: 1rem;
+      line-height: 1.5;
+      margin-bottom: 25px;
+    }
+
+    .status-error {
+      display: none;
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE D'ACCUEIL PRINCIPALE -->
+  <div class="splash-screen">
+    <img src="logo.png" alt="CleanCity Bot Energy" class="main-logo">
+    
+    <h1 class="app-title">CleanCity Bot Energy</h1>
+    <p class="app-subtitle">Signalez les dépôts sauvages de déchets en un clic pour une intervention rapide.</p>
+
+    <button class="btn-primary" onclick="openModal()">
+      Signaler un dépôt &rarr;
+    </button>
+  </div>
+
+  <!-- MODALE DE SIGNALEMENT -->
+  <div id="modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+
+      <!-- MESSAGE DE REMERCIEMENT (AFFICHE SEULEMENT APRES ENVOI) -->
+      <div id="thankYouBox" class="thank-you-box">
+        <div class="thank-you-icon">✅</div>
+        <div class="thank-you-title">Merci pour votre signalement !</div>
+        <p class="thank-you-text">
+          Votre demande a bien été transmise à l'équipe CleanCity Bot Energy. Notre administration centrale traite votre signalement sous peu.
+        </p>
+        <button class="btn-primary" onclick="closeModal()">Fermer</button>
+      </div>
+
+      <!-- FORMULAIRE -->
+      <div id="formContainer">
+        <h2 style="margin-top:0;">Signaler un dépôt</h2>
+
+        <div id="statusError" class="status-error">
+          Une erreur est survenue lors de l'envoi. Veuillez réessayer.
+        </div>
+
+        <form id="reportForm">
+          
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_subject" value="Nouveau signalement CleanCity Bot">
+          <input type="hidden" id="gpsInput" name="Coordonnees_GPS" value="">
+
+          <!-- Zone / Localisation -->
+          <div class="form-group">
+            <label for="zone">Secteur / Zone du dépôt</label>
+            <input type="text" id="zone" name="Zone_Localisation" class="form-control" placeholder="ex: Quartier Commerce, Rue 12" required>
+          </div>
+
+          <!-- Numéro de téléphone -->
+          <div class="form-group">
+            <label for="phone">Numéro de téléphone</label>
+            <input type="tel" id="phone" name="Telephone" class="form-control" placeholder="ex: 0708091011" required>
+          </div>
+
+          <!-- Type de déchets -->
+          <div class="form-group">
+            <label for="waste_type">Type de déchets prioritaires</label>
+            <select id="waste_type" name="Type_Dechets" class="form-control">
+              <option value="Ordures ménagères">Ordures ménagères</option>
+              <option value="Plastiques / Bouteilles">Plastiques / Bouteilles</option>
+              <option value="Gravats / Construction">Gravats / Construction</option>
+              <option value="Déchets électroniques">Déchets électroniques</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+
+          <!-- Photo du dépôt -->
+          <div class="form-group">
+            <label>Photo du dépôt (optionnel)</label>
+            <div class="photo-upload-box" onclick="document.getElementById('photoInput').click();">
+              <label class="photo-upload-label">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span>Prendre / Joindre une photo</span>
+              </label>
+              <input type="file" id="photoInput" name="attachment" accept="image/*" capture="environment" class="file-input-hidden" onchange="updateFileName(this)">
+              <div id="fileNameDisplay" class="file-name-preview"></div>
+            </div>
+          </div>
+
+          <!-- Urgence -->
+          <div class="form-group">
+            <label>Urgence de l'intervention</label>
+            <div class="urgency-options">
+              <label class="urgency-option">
+                <input type="radio" name="Niveau_Urgence" value="Standard" checked>
+                <span class="urgency-label">Standard</span>
+              </label>
+              <label class="urgency-option">
+                <input type="radio" name="Niveau_Urgence" value="Élevée">
+                <span class="urgency-label">Élevée</span>
+              </label>
+              <label class="urgency-option">
+                <input type="radio" name="Niveau_Urgence" value="Critique">
+                <span class="urgency-label">Critique</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" id="submitBtn" class="btn-primary" style="max-width: 100%; margin-top: 15px;">
+            Soumettre la demande &rarr;
+          </button>
+
+          <p class="disclaimer">
+            Validation et déploiement effectués exclusivement par notre Administrateur central.
+          </p>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openModal() {
+      var modal = document.getElementById('modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('formContainer').style.display = 'block';
+        document.getElementById('thankYouBox').style.display = 'none';
+        document.getElementById('statusError').style.display = 'none';
+        getGPSLocation();
+      }
+    }
+
+    function closeModal() {
+      var modal = document.getElementById('modal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
+    function updateFileName(input) {
+      var fileNameDisplay = document.getElementById('fileNameDisplay');
+      if (input.files && input.files[0]) {
+        fileNameDisplay.textContent = 'Photo sélectionnée : ' + input.files[0].name;
+      } else {
+        fileNameDisplay.textContent = '';
+      }
+    }
+
+    function getGPSLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            document.getElementById('gpsInput').value = lat + ', ' + lng + ' (https://maps.google.com/?q=' + lat + ',' + lng + ')';
+          },
+          function (error) {
+            document.getElementById('gpsInput').value = 'Non autorisé par l\'utilisateur';
+          }
+        );
+      } else {
+        document.getElementById('gpsInput').value = 'Géolocalisation non supportée';
+      }
+    }
+
+    document.getElementById('reportForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      
+      var form = this;
+      var formData = new FormData(form);
+      var submitBtn = document.getElementById('submitBtn');
+      var statusError = document.getElementById('statusError');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Envoi en cours...";
+      statusError.style.display = 'none';
+
+      var requestFormspree = fetch('https://formspree.io/f/xdeopvar', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Accept': 'application/json' }
+      });
+
+      var requestFormSubmit = fetch('https://formsubmit.co/gilbertouiya2@gmail.com', {
+        method: 'POST',
+        body: formData
+      });
+
+      Promise.allSettled([requestFormspree, requestFormSubmit])
+        .then(function (results) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Soumettre la demande \u2192";
+          
+          if (results[0].status === 'fulfilled' || results[1].status === 'fulfilled') {
+            document.getElementById('formContainer').style.display = 'none';
+            document.getElementById('thankYouBox').style.display = 'block';
+            form.reset();
+            document.getElementById('fileNameDisplay').textContent = '';
+          } else {
+            statusError.style.display = 'block';
+          }
+        })
+        .catch(function (error) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Soumettre la demande \u2192";
+          statusError.style.display = 'block';
+        });
+    });
+  </script>
+
+</body>
+</html>
